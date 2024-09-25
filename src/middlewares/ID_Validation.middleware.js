@@ -5,7 +5,7 @@ const ID_Validation = (req, res, next) => {
 
   // Validate if 'id' is a valid ObjectId
   if (!isValidObjectId(id)) {
-    return res.status(400).json({ error: "Invalid product ID format" });
+    return res.status(400).json({ error: "Invalid ID format" });
   }
 
   next();

@@ -37,7 +37,7 @@ exports.register = async (req, res) => {
   // Generate a JWT token
   const token = jwt.sign({ id: user._id, role: user.role });
 
-  res.status(201).json({ message: "User registered successfully!", token });
+  res.status(201).json({ message: "Registered successfully!", token });
 };
 
 // ---------------------- LOGIN ----------------------
@@ -65,9 +65,11 @@ exports.login = async (req, res) => {
   // Generate a JWT token
   const token = jwt.sign({ id: user._id, role: user.role });
 
-  res.status(200).json({ message: "Login successful!", token });
+  res.status(200).json({ message: "Successfully logged in!", token });
 };
+
 // ---------------------- GET PROFILE ----------------------
+
 exports.getProfile = async (req, res) => {
   const user = await Users.findById(req.verifiedUser.id).select("-password");
   if (!user) {

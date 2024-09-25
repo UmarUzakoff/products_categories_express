@@ -1,27 +1,34 @@
 const Categories = require("../models/Category");
 const Products = require("../models/Product");
 const { validateCategory } = require("../validation/category.validation");
+const fs = require("fs");
+const path = require("path");
 
 // ------------------------------------POST CATEGORY------------------------------
 
 exports.postCategory = async (req, res) => {
   const { name, description } = req.body;
+  const { imageName: category_image } = req;
+  const image = req.files?.image;
 
   // VALIDATION
   const { error } = validateCategory({ name, description });
   if (error) {
     console.log(error.message);
-    return res.status(403).json({ error: error.message });
+    return res.status(400).json({ error: error.message });
   }
 
   // CHECK IF CATEGORY EXISTS
   const existingCategory = await Categories.findOne({ name });
   if (existingCategory) {
-    return res.status(409).json({ error: "Category already exists!" });
+    return res
+      .status(409)
+      .json({ error: "Category with this name already exists!" });
   }
 
   // CREATE NEW CATEGORY
-  await Categories.create({ name, description });
+  image.mv(`${process.cwd()}/uploads/${category_image}`);
+  await Categories.create({ name, description, image: category_image });
   res.status(201).json({ message: "Category created successfully!" });
 };
 
@@ -54,7 +61,7 @@ exports.getCategories = async (req, res) => {
     const order = sortFields[1] === "desc" ? -1 : 1; // 1 for ascending, -1 for descending
     sortOption[field] = order; // Create a dynamic sort object
   }
-  
+
   // Apply filters, sorting, and pagination
   const categories = await Categories.find(filter)
     .sort(sortOption)
@@ -101,6 +108,14 @@ exports.deleteCategory = async (req, res) => {
   if (!category) {
     return res.status(404).json({ error: "Category not found!" });
   }
+
+  const imagePath = path.join(process.cwd(), "uploads", category.image);
+
+  // Delete the image file if it exists
+  if (fs.existsSync(imagePath)) {
+    fs.unlinkSync(imagePath); // Synchronously delete the image file
+  }
+
   await Products.deleteMany({ category: id });
   await Categories.findByIdAndDelete(id);
   res.status(200).json({ message: "Category deleted successfully!" });
@@ -110,14 +125,15 @@ exports.deleteCategory = async (req, res) => {
 
 exports.editCategory = async (req, res) => {
   const { id } = req.params;
-
   const { name, description } = req.body;
+  const { imageName: category_image } = req;
+  const image = req.files?.image;
 
   // VALIDATION
   const { error } = validateCategory({ name, description });
   if (error) {
     console.log(error.message);
-    return res.status(403).json({ error: error.message });
+    return res.status(400).json({ error: error.message });
   }
 
   // CHECK IF CATEGORY EXISTS
@@ -135,8 +151,16 @@ exports.editCategory = async (req, res) => {
   }
 
   // EDIT
+  const imagePath = path.join(process.cwd(), "uploads", category.image);
+
+  // Delete the image file if it exists
+  if (fs.existsSync(imagePath)) {
+    fs.unlinkSync(imagePath); // Synchronously delete the image file
+  }
+
+  image.mv(`${process.cwd()}/uploads/${category_image}`);
   await Categories.findByIdAndUpdate(id, {
-    $set: { name, description },
+    $set: { name, description, image: category_image },
   });
-  res.status(200).json({ message: "Category edited successfully!" });
+  res.status(200).json({ message: "Category updated successfully!" });
 };

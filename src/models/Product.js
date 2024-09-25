@@ -7,6 +7,10 @@ const schema = new Schema(
       required: true,
       unique: true,
     },
+    image: {
+      type: String,
+      required: true,
+    },
     color: {
       type: String,
       required: true,
@@ -23,6 +27,12 @@ const schema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Category",
     },
+    comments: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Comment",
+      },
+    ],
   },
   { timestamps: true }
 );

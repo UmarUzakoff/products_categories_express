@@ -2,22 +2,29 @@ const { isValidObjectId } = require("mongoose");
 const Categories = require("../models/Category");
 const Products = require("../models/Product");
 const { validateProduct } = require("../validation/product.validation");
+const fs = require("fs");
+const path = require("path");
 
 // ------------------------------------POST PRODUCT------------------------------
 
 exports.postProduct = async (req, res) => {
   const { name, color, price, quantity, category } = req.body;
+  const { imageName: product_image } = req;
+  const image = req.files?.image;
 
   // VALIDATION
   const { error } = validateProduct({ name, color, price, quantity, category });
   if (error) {
     console.log(error.message);
-    return res.status(403).json({ error: error.message });
+    return res.status(400).json({ error: error.message });
   }
 
   // VALIDATION: Category ID
+  if (!isValidObjectId(category)) {
+    return res.status(400).json({ error: "Invalid ID format" });
+  }
+
   const isCategory = await Categories.findById(category);
-  console.log(isCategory);
   if (!isCategory) {
     return res.status(404).json({ error: "Category not found!" });
   }
@@ -31,7 +38,15 @@ exports.postProduct = async (req, res) => {
   }
 
   // CREATE NEW PRODUCT
-  await Products.create({ name, color, price, quantity, category });
+  image.mv(`${process.cwd()}/uploads/${product_image}`);
+  await Products.create({
+    name,
+    color,
+    price,
+    quantity,
+    category,
+    image: product_image,
+  });
   res.status(201).json({ message: "Product created successfully!" });
 };
 
@@ -58,7 +73,7 @@ exports.getProducts = async (req, res) => {
   // Category filter
   if (categoryId) {
     if (!isValidObjectId(categoryId)) {
-      return res.status(400).json({ error: "Invalid category ID format" });
+      return res.status(400).json({ error: "Invalid category ID format!" });
     }
 
     const isCategory = await Categories.findById(categoryId);
@@ -98,6 +113,13 @@ exports.getProducts = async (req, res) => {
   // Apply filters and pagination
   const products = await Products.find(filter)
     .populate("category")
+    .populate({
+      path: "comments",
+      populate: {
+        path: "user_id",
+        select: "name", // Only fetch the user's name
+      },
+    })
     .sort(sortOption) // Sorting logic
     .skip((pageInt - 1) * limitInt)
     .limit(limitInt);
@@ -121,8 +143,16 @@ exports.getProducts = async (req, res) => {
 exports.getExactProduct = async (req, res) => {
   const { id } = req.params;
 
-  // FIND THE PRODUCT BY ID
-  const exactProduct = await Products.findById(id).populate("category");
+  // FIND THE PRODUCT BY ID AND POPULATE COMMENTS
+  const exactProduct = await Products.findById(id)
+    .populate("category")
+    .populate({
+      path: "comments", // Populating the comments
+      populate: {
+        path: "user_id", // Also populate the user who made the comment
+        select: "name", // Only select the name field of the user
+      },
+    });
 
   // CHECK IF PRODUCT EXISTS
   if (!exactProduct) {
@@ -143,6 +173,13 @@ exports.deleteProduct = async (req, res) => {
     return res.status(404).json({ error: "Product not found!" });
   }
 
+  const imagePath = path.join(process.cwd(), "uploads", product.image);
+
+  // Delete the image file if it exists
+  if (fs.existsSync(imagePath)) {
+    fs.unlinkSync(imagePath); // Synchronously delete the image file
+  }
+
   await Products.findByIdAndDelete(id);
   res.status(200).json({ message: "Product deleted successfully!" });
 };
@@ -151,8 +188,9 @@ exports.deleteProduct = async (req, res) => {
 
 exports.editProduct = async (req, res) => {
   const { id } = req.params;
-
   const { name, color, price, quantity, category } = req.body;
+  const { imageName: product_image } = req;
+  const image = req.files?.image;
 
   // VALIDATION
   const { error } = validateProduct({ name, color, price, quantity, category });
@@ -175,9 +213,28 @@ exports.editProduct = async (req, res) => {
       .json({ error: "Another product with this name already exists!" });
   }
 
+  // VALIDATION: Category ID
+  if (!isValidObjectId(category)) {
+    return res.status(400).json({ error: "Invalid ID format" });
+  }
+
+  const isCategory = await Categories.findById(category);
+  if (!isCategory) {
+    return res.status(404).json({ error: "Category not found!" });
+  }
+
   // EDIT
+  const imagePath = path.join(process.cwd(), "uploads", product.image);
+
+  // Delete the image file if it exists
+  if (fs.existsSync(imagePath)) {
+    fs.unlinkSync(imagePath); // Synchronously delete the image file
+  }
+
+  image.mv(`${process.cwd()}/uploads/${product_image}`);
+
   await Products.findByIdAndUpdate(id, {
     $set: { name, color, price, quantity, category },
   });
-  res.status(200).json({ message: "Product edited successfully!" });
+  res.status(200).json({ message: "Product updated successfully!" });
 };
