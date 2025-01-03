@@ -15,7 +15,7 @@ const run = async (app) => {
     await Users.create({
       name: "admin",
       email: "admin@gmail.com",
-      password: "$2y$12$7kwAQPLh3e1lcaERwto94ut62dhtkQwaaDq57FFcyfcPlVl1Ccw6u", //1234
+      password: "$2a$12$VJeMLnv1pHNKtA2AFqM86e.Z8mYv7sOr7Ys5AQtx0pwDqO1sgtapC", //1234
       role: "admin",
     });
   }

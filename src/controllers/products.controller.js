@@ -234,7 +234,7 @@ exports.editProduct = async (req, res) => {
   image.mv(`${process.cwd()}/uploads/${product_image}`);
 
   await Products.findByIdAndUpdate(id, {
-    $set: { name, color, price, quantity, category },
+    $set: { name, color, price, quantity, category, image: product_image },
   });
   res.status(200).json({ message: "Product updated successfully!" });
 };
